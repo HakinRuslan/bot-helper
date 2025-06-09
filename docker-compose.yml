@@ -1,0 +1,55 @@
+services:
+  bot:
+    container_name: bot
+    hostname: bot
+    env_file:
+      - .env
+    #image: example/database
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    # ports:
+    #     - '8000:8000'
+  postgres:
+      container_name: db
+      environment:
+        POSTGRES_PASSWORD: 7830
+        PGDATA: /var/lib/postgresql/data/pgdata
+      image: postgres:17
+      hostname: pgsql
+      restart: always
+      env_file:
+      - .env
+      # set shared memory limit when using docker-compose
+      shm_size: 128mb
+      # or set shared memory limit when deploy via swarm stack
+      volumes:
+        - /opt/postgres3:/var/lib/postgresql/data/pgdata
+
+  redis:
+    image: redis:7.2.5
+    container_name: redis_cont
+    environment:
+      - REDIS_PASSWORD=redis2525
+    ports:
+      - "6380:6379"
+    volumes:
+      - ./redisdata:/data
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    command: >
+      sh -c '
+        mkdir -p /usr/local/etc/redis &&
+        echo "bind 0.0.0.0" > /usr/local/etc/redis/redis.conf &&
+        echo "requirepass $${REDIS_PASSWORD}" >> /usr/local/etc/redis/redis.conf &&
+        echo "appendonly yes" >> /usr/local/etc/redis/redis.conf &&
+        echo "appendfsync everysec" >> /usr/local/etc/redis/redis.conf &&
+        redis-server /usr/local/etc/redis/redis.conf
+      '
+    restart: unless-stopped
